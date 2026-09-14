@@ -6,19 +6,19 @@ import { Suspense, useState } from 'react';
 
 const hotspotStyles = `
   @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); }
-    70% { transform: scale(1.15); box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.8); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 14px rgba(234, 179, 8, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
   }
   .hotspot-container { position: relative; pointer-events: auto; user-select: none; }
   .hotspot-button {
-    width: 24px; height: 24px; background-color: #ef4444; border: 2px solid #ffffff;
+    width: 24px; height: 24px; background-color: #eab308; border: 2px solid #ffffff;
     border-radius: 50%; cursor: pointer; animation: pulse 1.8s infinite;
     transition: transform 0.2s ease; display: flex; align-items: center;
-    justify-content: center; color: white; font-size: 12px; font-weight: bold;
+    justify-content: center; color: #0f172a; font-size: 12px; font-weight: bold;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
-  .hotspot-button:hover { transform: scale(1.25); background-color: #dc2626; }
+  .hotspot-button:hover { transform: scale(1.25); background-color: #ca8a04; }
   .hotspot-card {
     position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
     background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); color: #ffffff;
@@ -47,7 +47,7 @@ interface MaquinariaData {
   hotspots: HotspotData[];
 }
 
-// Configuración de los 3 modelos con sus respectivos puntos de interés (hotspots)
+// Configuración de los modelos incluyendo la nueva Retroexcavadora
 const MAQUINARIAS = {
   excavadora: {
     id: 'excavadora',
@@ -58,6 +58,17 @@ const MAQUINARIAS = {
       { number: '2', position: [-0.8, 0.3, 0], title: 'Brazo e Hidráulicos', description: 'Sistema de pistones hidráulicos de alta presión.' },
       { number: '3', position: [0.3, 0.1, 0.2], title: 'Cabina de Mando', description: 'Estación ergonómica con cristal blindado de seguridad.' },
       { number: '4', position: [0.3, -0.4, 0.2], title: 'Oruga de Tracción', description: 'Distribuye el peso sobre superficies blandas.' }
+    ]
+  },
+  retroexcavadora: {
+    id: 'retroexcavadora',
+    nombre: 'Retroexcavadora QSP-3CX',
+    path: '/modelos/retroexcavadora.glb',
+    hotspots: [
+      { number: '1', position: [-1.2, -0.3, 0], title: 'Cucharon Frontal', description: 'Pala cargadora de alta capacidad para movimiento de materiales.' },
+      { number: '2', position: [0, 0.3, 0], title: 'Cabina Operativa 360°', description: 'Estación con asiento giratorio para doble mando (cargador/excavador).' },
+      { number: '3', position: [0.5, -0.3, 0.4], title: 'Estabilizadores Hidráulicos', description: 'Patas extensibles para anclaje firme durante la excavación.' },
+      { number: '4', position: [1.2, 0.4, 0], title: 'Brazo Excavador Trasero', description: 'Sistema articulado con balde profundo para zanjas.' }
     ]
   },
   autohormigonera: {
@@ -156,6 +167,8 @@ export default function ModelCanvas() {
           padding: '10px',
           borderRadius: '10px',
           backdropFilter: 'blur(5px)',
+          maxWidth: 'calc(100vw - 40px)',
+          overflowX: 'auto',
         }}
       >
         {(Object.keys(MAQUINARIAS) as MaquinariaKey[]).map((key) => {
@@ -163,24 +176,23 @@ export default function ModelCanvas() {
           const isActive = selectedKey === key;
           return (
             <button
-  key={key}
-  onClick={() => setSelectedKey(key)}
-  style={{
-    padding: '8px 14px',
-    borderRadius: '6px',
-    border: 'none',
-    // Cambiamos el color activo #ef4444 por amarillo #eab308 (o #f59e0b)
-    // y el color del texto a negro (#0f172a) para que tenga buen contraste
-    backgroundColor: isActive ? '#eab308' : '#334155',
-    color: isActive ? '#0f172a' : '#ffffff',
-    fontWeight: isActive ? 'bold' : 'normal',
-    cursor: 'pointer',
-    fontSize: '13px',
-    transition: 'all 0.2s',
-  }}
->
-  {item.nombre}
-</button>
+              key={key}
+              onClick={() => setSelectedKey(key)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: isActive ? '#eab308' : '#334155',
+                color: isActive ? '#0f172a' : '#ffffff',
+                fontWeight: isActive ? 'bold' : 'normal',
+                cursor: 'pointer',
+                fontSize: '13px',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s',
+              }}
+            >
+              {item.nombre}
+            </button>
           );
         })}
       </div>
