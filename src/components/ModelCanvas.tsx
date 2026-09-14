@@ -47,11 +47,10 @@ interface MaquinariaData {
   hotspots: HotspotData[];
 }
 
-// Configuración de los modelos incluyendo la nueva Retroexcavadora
 const MAQUINARIAS = {
   excavadora: {
     id: 'excavadora',
-    nombre: 'Excavadora Hyundai HW220-9',
+    nombre: 'Excavadora QSP Hyundai HW220-9',
     path: '/modelos/excavadora.glb',
     hotspots: [
       { number: '1', position: [-0.8, -0.35, 0.1], title: 'Punta de la Cuchara', description: 'Dientes de penetración para romper terrenos duros.' },
@@ -65,20 +64,31 @@ const MAQUINARIAS = {
     nombre: 'Retroexcavadora QSP-3CX',
     path: '/modelos/retroexcavadora.glb',
     hotspots: [
-      { number: '1', position: [-1.2, -0.3, 0], title: 'Cucharon Frontal', description: 'Pala cargadora de alta capacidad para movimiento de materiales.' },
+      { number: '1', position: [-0.8, -0.3, 0], title: 'Cucharon Frontal', description: 'Pala cargadora de alta capacidad para movimiento de materiales.' },
       { number: '2', position: [0, 0.3, 0], title: 'Cabina Operativa 360°', description: 'Estación con asiento giratorio para doble mando (cargador/excavador).' },
-      { number: '3', position: [0.5, -0.3, 0.4], title: 'Estabilizadores Hidráulicos', description: 'Patas extensibles para anclaje firme durante la excavación.' },
-      { number: '4', position: [1.2, 0.4, 0], title: 'Brazo Excavador Trasero', description: 'Sistema articulado con balde profundo para zanjas.' }
+      { number: '3', position: [0.2, -0.3, 0.3], title: 'Estabilizadores Hidráulicos', description: 'Patas extensibles para anclaje firme durante la excavación.' },
+      { number: '4', position: [0.8, 0.4, 0], title: 'Brazo Excavador Trasero', description: 'Sistema articulado con balde profundo para zanjas.' }
+    ]
+  },
+  bulldozer: {
+    id: 'bulldozer',
+    nombre: 'Bulldozer QSP D8T',
+    path: '/modelos/bulldozer.glb',
+    hotspots: [
+      { number: '1', position: [-0.8, -0.3, 0], title: 'Hoja Topadora Frontal', description: 'Cuchilla de empuje reforzada para nivelación de tierra y desmonte masivo.' },
+      { number: '2', position: [-0.12, 0.2, 0.2], title: 'Cilindros de Levante', description: 'Pistones hidráulicos pesados para ajustar el ángulo y altura de la hoja.' },
+      { number: '3', position: [0.3, 0.4, 0.2], title: 'Cabina ROPS/FOPS', description: 'Estructura con alta protección antivuelco y visibilidad panorámica.' },
+      { number: '4', position: [0.1, -0.35, 0.4], title: 'Oruga de Bajo Centro de Gravedad', description: 'Cadenas de tracción reforzadas para alta adherencia en pendientes.' }
     ]
   },
   autohormigonera: {
     id: 'autohormigonera',
-    nombre: 'Autohormigonera Carmix 3.5 TT',
+    nombre: 'Autohormigonera QSP 3.5 TT',
     path: '/modelos/autohormigonera.glb',
     hotspots: [
-      { number: '1', position: [0, 0.4, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
-      { number: '2', position: [-0.6, 0.1, 0.3], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
-      { number: '3', position: [0.5, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
+      { number: '1', position: [0, 0.3, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
+      { number: '2', position: [-0.8, -0.1, -0.15], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
+      { number: '3', position: [-0.2, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
     ]
   },
   rodillo: {
@@ -154,21 +164,23 @@ export default function ModelCanvas() {
     <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <style>{hotspotStyles}</style>
 
-      {/* Menú Flotante para Seleccionar el Modelo */}
+      {/* Menú Flotante Centrado */}
       <div
         style={{
           position: 'absolute',
           top: 20,
-          left: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
           zIndex: 10,
           display: 'flex',
           gap: '10px',
           background: 'rgba(15, 23, 42, 0.8)',
-          padding: '10px',
-          borderRadius: '10px',
-          backdropFilter: 'blur(5px)',
+          padding: '10px 14px',
+          borderRadius: '12px',
+          backdropFilter: 'blur(8px)',
           maxWidth: 'calc(100vw - 40px)',
           overflowX: 'auto',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
         }}
       >
         {(Object.keys(MAQUINARIAS) as MaquinariaKey[]).map((key) => {
@@ -207,7 +219,12 @@ export default function ModelCanvas() {
           <Model key={currentData.id} data={currentData} />
         </Suspense>
 
-        <OrbitControls makeDefault enableZoom={true} />
+        <OrbitControls 
+          makeDefault 
+          enableZoom={true} 
+          autoRotate={true} 
+          autoRotateSpeed={0.5} 
+        />
       </Canvas>
     </div>
   );
