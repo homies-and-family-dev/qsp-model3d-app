@@ -164,50 +164,51 @@ export default function ModelCanvas() {
     <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <style>{hotspotStyles}</style>
 
-      {/* Menú Flotante Centrado */}
-      <div
+      {/* Menú Flotante Centrado en la Parte Inferior */}
+<div
+  style={{
+    position: 'absolute',
+    bottom: 60, // Se cambia 'top' por 'bottom'
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 10,
+    display: 'flex',
+    gap: '10px',
+    background: 'rgba(15, 23, 42, 0.85)',
+    padding: '10px 14px',
+    borderRadius: '12px',
+    backdropFilter: 'blur(8px)',
+    maxWidth: 'calc(100vw - 40px)',
+    overflowX: 'auto',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+  }}
+>
+  {(Object.keys(MAQUINARIAS) as MaquinariaKey[]).map((key) => {
+    const item = MAQUINARIAS[key];
+    const isActive = selectedKey === key;
+    return (
+      <button
+        key={key}
+        onClick={() => setSelectedKey(key)}
         style={{
-          position: 'absolute',
-          top: 20,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-          display: 'flex',
-          gap: '10px',
-          background: 'rgba(15, 23, 42, 0.8)',
-          padding: '10px 14px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(8px)',
-          maxWidth: 'calc(100vw - 40px)',
-          overflowX: 'auto',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+          padding: '8px 14px',
+          borderRadius: '6px',
+          border: 'none',
+          backgroundColor: isActive ? '#eab308' : '#334155',
+          color: isActive ? '#0f172a' : '#ffffff',
+          fontWeight: isActive ? 'bold' : 'normal',
+          cursor: 'pointer',
+          fontSize: '13px',
+          whiteSpace: 'nowrap',
+          transition: 'all 0.2s',
         }}
       >
-        {(Object.keys(MAQUINARIAS) as MaquinariaKey[]).map((key) => {
-          const item = MAQUINARIAS[key];
-          const isActive = selectedKey === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedKey(key)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: isActive ? '#eab308' : '#334155',
-                color: isActive ? '#0f172a' : '#ffffff',
-                fontWeight: isActive ? 'bold' : 'normal',
-                cursor: 'pointer',
-                fontSize: '13px',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s',
-              }}
-            >
-              {item.nombre}
-            </button>
-          );
-        })}
-      </div>
+        {item.nombre}
+      </button>
+    );
+  })}
+</div>
 
       <Canvas camera={{ position: [0, 1.5, 7], fov: 50 }}>
         <color attach="background" args={['#ffffff']} />
