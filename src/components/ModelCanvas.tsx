@@ -6,96 +6,89 @@ import { Suspense, useState } from 'react';
 
 const hotspotStyles = `
   @keyframes pulse {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8);
-    }
-    70% {
-      transform: scale(1.15);
-      box-shadow: 0 0 0 14px rgba(239, 68, 68, 0);
-    }
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-    }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
   }
-
-  .hotspot-container {
-    position: relative;
-    pointer-events: auto;
-    user-select: none;
-  }
-
+  .hotspot-container { position: relative; pointer-events: auto; user-select: none; }
   .hotspot-button {
-    width: 24px;
-    height: 24px;
-    background-color: #ef4444;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    cursor: pointer;
-    animation: pulse 1.8s infinite;
-    transition: transform 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
+    width: 24px; height: 24px; background-color: #ef4444; border: 2px solid #ffffff;
+    border-radius: 50%; cursor: pointer; animation: pulse 1.8s infinite;
+    transition: transform 0.2s ease; display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 12px; font-weight: bold;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
-
-  .hotspot-button:hover {
-    transform: scale(1.25);
-    background-color: #dc2626;
-  }
-
+  .hotspot-button:hover { transform: scale(1.25); background-color: #dc2626; }
   .hotspot-card {
-    position: absolute;
-    bottom: 34px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(8px);
-    color: #ffffff;
-    padding: 12px 16px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-    width: 230px;
-    font-family: system-ui, -apple-system, sans-serif;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    z-index: 50;
+    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); color: #ffffff;
+    padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    width: 230px; font-family: system-ui, -apple-system, sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.15); z-index: 50;
   }
-
-  /* Flecha apuntadora de la tarjeta hacia el punto */
   .hotspot-card::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 6px 6px 0 6px;
-    border-style: solid;
+    content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+    border-width: 6px 6px 0 6px; border-style: solid;
     border-color: rgba(15, 23, 42, 0.95) transparent transparent transparent;
   }
 `;
 
-interface HotspotProps {
+interface HotspotData {
+  number: string;
   position: [number, number, number];
   title: string;
   description: string;
-  number?: string;
 }
 
-function Hotspot({ position, title, description, number = '+' }: HotspotProps) {
+interface MaquinariaData {
+  id: string;
+  nombre: string;
+  path: string;
+  hotspots: HotspotData[];
+}
+
+// Configuración de los 3 modelos con sus respectivos puntos de interés (hotspots)
+const MAQUINARIAS = {
+  excavadora: {
+    id: 'excavadora',
+    nombre: 'Excavadora Hyundai HW220-9',
+    path: '/modelos/excavadora.glb',
+    hotspots: [
+      { number: '1', position: [-0.8, -0.35, 0.1], title: 'Punta de la Cuchara', description: 'Dientes de penetración para romper terrenos duros.' },
+      { number: '2', position: [-0.8, 0.3, 0], title: 'Brazo e Hidráulicos', description: 'Sistema de pistones hidráulicos de alta presión.' },
+      { number: '3', position: [0.3, 0.1, 0.2], title: 'Cabina de Mando', description: 'Estación ergonómica con cristal blindado de seguridad.' },
+      { number: '4', position: [0.3, -0.4, 0.2], title: 'Oruga de Tracción', description: 'Distribuye el peso sobre superficies blandas.' }
+    ]
+  },
+  autohormigonera: {
+    id: 'autohormigonera',
+    nombre: 'Autohormigonera Carmix 3.5 TT',
+    path: '/modelos/autohormigonera.glb',
+    hotspots: [
+      { number: '1', position: [0, 0.4, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
+      { number: '2', position: [-0.6, 0.1, 0.3], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
+      { number: '3', position: [0.5, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
+    ]
+  },
+  rodillo: {
+    id: 'rodillo',
+    nombre: 'Rodillo Compactador QSP',
+    path: '/modelos/rodillo.glb',
+    hotspots: [
+      { number: '1', position: [-0.5, -0.2, 0], title: 'Rodillo Cilíndrico', description: 'Tambor metálico de alta frecuencia de vibración.' },
+      { number: '2', position: [0.2, 0.4, 0], title: 'Cabina Operativa', description: 'Protección ROPS/FOPS para alta seguridad.' },
+      { number: '3', position: [0.6, -0.2, 0], title: 'Eje Neumático Trasero', description: 'Ruedas de tracción para suelos inestables.' }
+    ]
+  }
+} as const satisfies Record<string, MaquinariaData>;
+
+type MaquinariaKey = keyof typeof MAQUINARIAS;
+
+function Hotspot({ position, title, description, number = '+' }: HotspotData) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Html
-      position={position}
-      center
-      /* zIndexRange previene que la interfaz se corte o se solape con otros elementos 3D */
-      zIndexRange={[100, 0]}
-    >
+    <Html position={position} center zIndexRange={[100, 0]}>
       <div className="hotspot-container">
         <button
           className="hotspot-button"
@@ -114,13 +107,7 @@ function Hotspot({ position, title, description, number = '+' }: HotspotProps) {
               <strong style={{ fontSize: '13px', color: '#f8fafc' }}>{title}</strong>
               <button
                 onClick={() => setIsOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                }}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '12px' }}
               >
                 ✕
               </button>
@@ -135,60 +122,68 @@ function Hotspot({ position, title, description, number = '+' }: HotspotProps) {
   );
 }
 
-function Model() {
-  const { scene } = useGLTF('/modelos/Meshy_AI_Yellow_Excavator_on_C_0908153241_texture.glb');
+function Model({ data }: { data: MaquinariaData }) {
+  const { scene } = useGLTF(data.path);
 
   return (
     <group>
-      {/* El modelo 3D principal */}
       <primitive object={scene} scale={1} position={[0, 0, 0]} />
-
-      {/* 
-        COORDENADAS EXACTAS (X, Y, Z) DE LA EXCAVADORA:
-        - X: Posición horizontal (Negativo = Izquierda/Pala, Positivo = Derecha/Motor)
-        - Y: Posición vertical (Negativo = Suelo/Orugas, Positivo = Cabina/Brazo)
-        - Z: Profundidad (Adelante / Atrás)
-      */}
-
-      {/* 1. Punta de la Pala / Cuchara */}
-      <Hotspot
-        number="1"
-        position={[ -0.8, -0.35, 0.1]}
-        title="Punta de la Cuchara"
-        description="Dientes de penetración de alta resistencia diseñados para romper terrenos duros."
-      />
-
-      {/* 2. Cilindro hidráulico del brazo */}
-      <Hotspot
-        number="2"
-        position={[-0.8, 0.3, 0]}
-        title="Brazo e Hidráulicos"
-        description="Sistema de pistones hidráulicos de alta presión para la elevación de fuerza."
-      />
-
-      {/* 3. Cabina del operador */}
-      <Hotspot
-        number="3"
-        position={[0.3, 0.1, 0.2]}
-        title="Cabina de Mando"
-        description="Estación de trabajo ergonómica con cristal blindado de seguridad."
-      />
-
-      {/* 4. Oruga / Cadena de rodaje */}
-      <Hotspot
-        number="4"
-        position={[0.3, -0.4, 0.2]}
-        title="Oruga de Tracción"
-        description="Estructura metálica continua que distribuye el peso sobre superficies blandas."
-      />
+      {data.hotspots.map((hs, idx) => (
+        <Hotspot key={`${data.id}-${idx}`} {...hs} />
+      ))}
     </group>
   );
 }
 
 export default function ModelCanvas() {
+  const [selectedKey, setSelectedKey] = useState<MaquinariaKey>('excavadora');
+  const currentData = MAQUINARIAS[selectedKey];
+
   return (
     <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <style>{hotspotStyles}</style>
+
+      {/* Menú Flotante para Seleccionar el Modelo */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 20,
+          left: 20,
+          zIndex: 10,
+          display: 'flex',
+          gap: '10px',
+          background: 'rgba(15, 23, 42, 0.8)',
+          padding: '10px',
+          borderRadius: '10px',
+          backdropFilter: 'blur(5px)',
+        }}
+      >
+        {(Object.keys(MAQUINARIAS) as MaquinariaKey[]).map((key) => {
+          const item = MAQUINARIAS[key];
+          const isActive = selectedKey === key;
+          return (
+            <button
+  key={key}
+  onClick={() => setSelectedKey(key)}
+  style={{
+    padding: '8px 14px',
+    borderRadius: '6px',
+    border: 'none',
+    // Cambiamos el color activo #ef4444 por amarillo #eab308 (o #f59e0b)
+    // y el color del texto a negro (#0f172a) para que tenga buen contraste
+    backgroundColor: isActive ? '#eab308' : '#334155',
+    color: isActive ? '#0f172a' : '#ffffff',
+    fontWeight: isActive ? 'bold' : 'normal',
+    cursor: 'pointer',
+    fontSize: '13px',
+    transition: 'all 0.2s',
+  }}
+>
+  {item.nombre}
+</button>
+          );
+        })}
+      </div>
 
       <Canvas camera={{ position: [0, 1.5, 7], fov: 50 }}>
         <color attach="background" args={['#ffffff']} />
@@ -197,7 +192,7 @@ export default function ModelCanvas() {
         <directionalLight position={[10, 10, 10]} intensity={1.5} />
 
         <Suspense fallback={null}>
-          <Model />
+          <Model key={currentData.id} data={currentData} />
         </Suspense>
 
         <OrbitControls makeDefault enableZoom={true} />
