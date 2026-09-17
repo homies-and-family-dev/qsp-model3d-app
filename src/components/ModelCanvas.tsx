@@ -1,8 +1,8 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import React, { useState, useEffect, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Html, ContactShadows } from '@react-three/drei';
-import { Suspense, useState, useEffect } from 'react';
 import Image from 'next/image';
 import * as THREE from 'three';
 
@@ -14,15 +14,17 @@ const hotspotStyles = `
   }
   .hotspot-container { position: relative; pointer-events: auto; user-select: none; }
   .hotspot-button {
-    width: 32px; height: 32px; background-color: #eab308; border: 2px solid #000000;
+    width: 24px; height: 24px; background-color: #eab308; border: 2px solid #000000;
     border-radius: 50%; cursor: pointer; animation: pulse 1.8s infinite;
     transition: transform 0.2s ease; display: flex; align-items: center;
-    justify-content: center; color: #000000; font-size: 14px; font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.6);
   }
-  .hotspot-button:hover, .hotspot-button:active { transform: scale(1.25); background-color: #ca8a04; }
+  .hotspot-dot {
+    width: 8px; height: 8px; background-color: #000000; border-radius: 50%;
+  }
+  .hotspot-button:hover, .hotspot-button:active { transform: scale(1.3); background-color: #facc15; }
   .hotspot-card {
-    position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
+    position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
     background: #000000; color: #ffffff;
     padding: 16px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
     width: 280px; font-family: system-ui, -apple-system, sans-serif;
@@ -33,13 +35,9 @@ const hotspotStyles = `
     border-width: 8px 8px 0 8px; border-style: solid;
     border-color: #eab308 transparent transparent transparent;
   }
-  .spec-sheet-modal::-webkit-scrollbar { width: 8px; }
-  .spec-sheet-modal::-webkit-scrollbar-track { background: #111111; }
-  .spec-sheet-modal::-webkit-scrollbar-thumb { background: #eab308; border-radius: 4px; }
 `;
 
 interface HotspotData {
-  number: string;
   position: [number, number, number];
   title: string;
   description: string;
@@ -57,7 +55,7 @@ interface MaquinariaData {
 const MAQUINARIAS: Record<string, MaquinariaData> = {
   excavadora: {
     id: 'excavadora',
-    nombre: 'Excavadora QSP Hyundai HW220-9',
+    nombre: 'Excavadora QSP HW220-9',
     path: '/modelos/excavadora.glb',
     cameraPosition: [0, 0, 2.5],
     especificaciones: {
@@ -80,18 +78,18 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Combustible': '87.1 GL',
       'Tanque Hidráulico': '71.3 GL',
       'Tipo de Mandos': 'JOYSTICK',
-      'Freno de Estacionamiento': 'HIDRAULICO',
-      'Cabina': 'CERRADA AA PROTECCION TIPO ROPS + FOPS',
+      'Freno Estacionamiento': 'HIDRAULICO',
+      'Cabina': 'CERRADA AA PROTECCION ROPS + FOPS',
       'Capacidad Aceite Motor': '2.74 GL',
       'Ancho Balde Cargador': '1.200 mm',
       'Alcance Horizontal Brazo': '9.675 mm',
       'Altura Alcance Brazo': '10.950 mm',
     },
     hotspots: [
-      { number: '1', position: [-0.8, -0.35, 0.1], title: 'Punta de la Cuchara', description: 'Dientes de penetración para romper terrenos duros.' },
-      { number: '2', position: [-0.8, 0.3, 0], title: 'Brazo e Hidráulicos', description: 'Sistema de pistones hidráulicos de alta presión.' },
-      { number: '3', position: [0.3, 0.1, 0.2], title: 'Cabina de Mando', description: 'Estación ergonómica con cristal blindado de seguridad.' },
-      { number: '4', position: [0.3, -0.4, 0.2], title: 'Oruga de Tracción', description: 'Distribuye el peso sobre superficies blandas.' }
+      { position: [-0.8, -0.35, 0.1], title: 'Punta de la Cuchara', description: 'Dientes de penetración para romper terrenos duros.' },
+      { position: [-0.8, 0.3, 0], title: 'Brazo e Hidráulicos', description: 'Sistema de pistones hidráulicos de alta presión.' },
+      { position: [0.3, 0.1, 0.2], title: 'Cabina de Mando', description: 'Estación ergonómica con cristal blindado de seguridad.' },
+      { position: [0.3, -0.4, 0.2], title: 'Oruga de Tracción', description: 'Distribuye el peso sobre superficies blandas.' }
     ]
   },
   retroexcavadora: {
@@ -112,9 +110,9 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Altura Pasador Cucharón': '3.498 mm',
       'Transmisión': 'CARRARO TLB1-4WD',
       'Tipo de Mandos': 'DIRECCION HIDRAULICA / MANDOS JOYSTICK',
-      'Freno de Estacionamiento': 'MANUAL',
-      'Cabina': 'CERRADA AA PROTECCION TIPO ROPS + FOPS',
-      'Sistema de Refrigeración': 'LIQUIDA',
+      'Freno Estacionamiento': 'MANUAL',
+      'Cabina': 'CERRADA AA PROTECCION ROPS + FOPS',
+      'Sistema Refrigeración': 'LIQUIDA',
       'Ancho Balde Cargador': '2.268 mm',
       'Capacidad Balde Excavador': '0.30 M3',
       'Alcance Horizontal Brazo': '5.304 mm',
@@ -122,10 +120,10 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Auxiliar Hidráulico': 'ADELANTE Y ATRÁS',
     },
     hotspots: [
-      { number: '1', position: [-0.8, -0.3, 0], title: 'Cucharon Frontal', description: 'Pala cargadora de alta capacidad para movimiento de materiales.' },
-      { number: '2', position: [0, 0.3, 0], title: 'Cabina Operativa 360°', description: 'Estación con asiento giratorio para doble mando (cargador/excavador).' },
-      { number: '3', position: [0.2, -0.3, 0.3], title: 'Estabilizadores Hidráulicos', description: 'Patas extensibles para anclaje firme durante la excavación.' },
-      { number: '4', position: [0.8, 0.4, 0], title: 'Brazo Excavador Trasero', description: 'Sistema articulado con balde profundo para zanjas.' }
+      { position: [-0.8, -0.3, 0], title: 'Cucharon Frontal', description: 'Pala cargadora de alta capacidad para movimiento de materiales.' },
+      { position: [0, 0.3, 0], title: 'Cabina Operativa 360°', description: 'Estación con asiento giratorio para doble mando (cargador/excavador).' },
+      { position: [0.2, -0.3, 0.3], title: 'Estabilizadores Hidráulicos', description: 'Patas extensibles para anclaje firme durante la excavación.' },
+      { position: [0.8, 0.4, 0], title: 'Brazo Excavador Trasero', description: 'Sistema articulado con balde profundo para zanjas.' }
     ]
   },
   bulldozer: {
@@ -144,8 +142,8 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Combustible': '74 GL',
       'Tanque Hidráulico': '20 GL',
       'Tipo de Mandos': 'JOYSTICK',
-      'Freno de Estacionamiento': 'MECANICO + HIDRAULICO',
-      'Cabina': 'CERRADA AA PROTECCION TIPO ROPS + FOPS',
+      'Freno Estacionamiento': 'MECANICO + HIDRAULICO',
+      'Cabina': 'CERRADA AA PROTECCION ROPS + FOPS',
       'Ancho Hoja Dozer': '3.185 mm',
       'Alto Hoja Dozer': '1.090 mm',
       'Capacidad Hoja Dozer': '3.7 M3',
@@ -153,10 +151,10 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Ripper Trasero': 'NO',
     },
     hotspots: [
-      { number: '1', position: [-0.8, -0.3, 0], title: 'Hoja Topadora Frontal', description: 'Cuchilla de empuje reinforced para nivelación de tierra y desmonte masivo.' },
-      { number: '2', position: [-0.12, 0.2, 0.2], title: 'Cilindros de Levante', description: 'Pistones hidráulicos pesados para ajustar el ángulo y altura de la hoja.' },
-      { number: '3', position: [0.3, 0.4, 0.2], title: 'Cabina ROPS/FOPS', description: 'Estructura con alta protección antivuelco y visibilidad panorámica.' },
-      { number: '4', position: [0.1, -0.35, 0.4], title: 'Oruga de Bajo Centro de Gravedad', description: 'Cadenas de tracción para alta adherencia en pendientes.' }
+      { position: [-0.8, -0.3, 0], title: 'Hoja Topadora Frontal', description: 'Cuchilla de empuje reinforced para nivelación de tierra y desmonte masivo.' },
+      { position: [-0.12, 0.2, 0.2], title: 'Cilindros de Levante', description: 'Pistones hidráulicos pesados para ajustar el ángulo y altura de la hoja.' },
+      { position: [0.3, 0.4, 0.2], title: 'Cabina ROPS/FOPS', description: 'Estructura con alta protección antivuelco y visibilidad panorámica.' },
+      { position: [0.1, -0.35, 0.4], title: 'Oruga de Bajo Centro de Gravedad', description: 'Cadenas de tracción para alta adherencia en pendientes.' }
     ]
   },
   autohormigonera_ah2: {
@@ -176,24 +174,24 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Combustible': '120 LT',
       'Ángulo de Descarga': '180°',
       'Tanque de Agua': '920 litros',
-      'Velocidad de Rotación': '18-21 rpm',
+      'Velocidad Rotación': '18-21 rpm',
       'Tracción': 'Convertidor de par',
-      'Caja de Cambios': 'Modelo ZL-280 con servotransmisión (Power Shift)',
-      'Marchas': '4 hacia adelante + 4 hacia atrás',
-      'Suministro de Agua': 'Relé de tiempo',
-      'Tipo de Tambor': 'Doble cono con aspas de doble espiral y fondo convexo',
-      'Capacidad Geométrica Tambor': '4740 litros',
-      'Rotación del Chasis': '270° hidráulica con bloqueo automático',
-      'Elevación del Tambor': '2 gatos de doble acción (posición horizontal)',
-      'Canal de Descarga': 'Rotación de 90°, ajuste manual, 2 extensiones incluidas',
-      'Sistema de Descarga': 'Canal hidráulico automático operable desde cabina',
-      'Alimentación': 'Cucharón simple con apertura cierre rápida y con poco polvo',
-      'Rotación': 'Diseño de rotación sincrónica entre tanque y cabina',
+      'Caja de Cambios': 'Modelo ZL-280 con servotransmisión',
+      'Marchas': '4 hacia adelante + 4 atrás',
+      'Suministro Agua': 'Relé de tiempo',
+      'Tipo de Tambor': 'Doble cono / aspas doble espiral',
+      'Capacidad Geométrica': '4740 litros',
+      'Rotación del Chasis': '270° hidráulica',
+      'Elevación Tambor': '2 gatos doble acción',
+      'Canal de Descarga': 'Rotación 90° manual',
+      'Sistema Descarga': 'Canal hidráulico automático',
+      'Alimentación': 'Cucharón simple rápido',
+      'Rotación': 'Sincrónica tanque y cabina',
     },
     hotspots: [
-      { number: '1', position: [0, 0.3, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
-      { number: '2', position: [-0.8, -0.1, -0.15], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
-      { number: '3', position: [-0.2, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
+      { position: [0, 0.3, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
+      { position: [-0.8, -0.1, -0.15], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
+      { position: [-0.2, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
     ]
   },
   autohormigonera_ah3_5: {
@@ -217,7 +215,7 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Hidráulico': '75 L',
       'Altura de Descarga': '1.700 mm',
       'Tipo de Mandos': 'Joystick - Hidráulica',
-      'Freno de Estacionamiento': 'Automático con corte de aire',
+      'Freno Estacionamiento': 'Automático con corte de aire',
       'Cabina': 'Cabina full equipo',
       'Ángulo de Descarga': '180°',
       'Flujo de Agua': '3 L/s',
@@ -225,9 +223,9 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Depósito Aceite Caja': '18 L',
     },
     hotspots: [
-      { number: '1', position: [0, 0.3, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
-      { number: '2', position: [-0.8, -0.1, -0.15], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
-      { number: '3', position: [-0.2, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
+      { position: [0, 0.3, 0], title: 'Tambor Mezclador', description: 'Capacidad de mezcla de concreto de alta homogeneidad.' },
+      { position: [-0.8, -0.1, -0.15], title: 'Pala de Autocarga', description: 'Pala frontal articulada para cargar agregados.' },
+      { position: [-0.2, 0.2, 0.3], title: 'Cabina Frontal', description: 'Diseño panorámico con visión de descarga.' }
     ]
   },
   rodillo_vr6: {
@@ -248,18 +246,18 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Hidráulico': '130 L',
       'Frecuencia Vibración': '45 HZ',
       'Tipo de Mandos': 'DIRECCION HIDRAULICA',
-      'Freno de Estacionamiento': 'HIDRAULICO',
-      'Cabina': 'CERRADA AA PROTECCION TIPO ROPS + FOPS',
+      'Freno Estacionamiento': 'HIDRAULICO',
+      'Cabina': 'CERRADA AA PROTECCION ROPS + FOPS',
       'Capacidad Aceite Motor': '5.5 L',
-      'Ancho de Trabajo Rodillo': '1.700 mm',
+      'Ancho Trabajo Rodillo': '1.700 mm',
       'Diámetro del Tambor': '1.200 mm',
-      'Espesor Cubierta Tambor': '20 mm',
-      'Capacidad de Vibración': '75 KN',
+      'Espesor Cubierta': '20 mm',
+      'Capacidad Vibración': '75 KN',
     },
     hotspots: [
-      { number: '1', position: [-0.5, -0.2, 0], title: 'Rodillo Cilíndrico', description: 'Tambor metálico de alta frecuencia de vibración.' },
-      { number: '2', position: [0.2, 0.4, 0], title: 'Cabina Operativa', description: 'Protección ROPS/FOPS para alta seguridad.' },
-      { number: '3', position: [0.6, -0.2, 0], title: 'Eje Neumático Trasero', description: 'Ruedas de tracción para suelos inestables.' }
+      { position: [-0.5, -0.2, 0], title: 'Rodillo Cilíndrico', description: 'Tambor metálico de alta frecuencia de vibración.' },
+      { position: [0.2, 0.4, 0], title: 'Cabina Operativa', description: 'Protección ROPS/FOPS para alta seguridad.' },
+      { position: [0.6, -0.2, 0], title: 'Eje Neumático Trasero', description: 'Ruedas de tracción para suelos inestables.' }
     ]
   },
   rodillo_vr8: {
@@ -280,18 +278,18 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
       'Tanque Hidráulico': '140 L',
       'Frecuencia Vibración': '45 HZ',
       'Tipo de Mandos': 'DIRECCION HIDRAULICA',
-      'Freno de Estacionamiento': 'HIDRAULICO',
-      'Cabina': 'CERRADA AA PROTECCION TIPO ROPS + FOPS',
+      'Freno Estacionamiento': 'HIDRAULICO',
+      'Cabina': 'CERRADA AA PROTECCION ROPS + FOPS',
       'Capacidad Aceite Motor': '8.5 L',
-      'Ancho de Trabajo Rodillo': '1.860 mm',
+      'Ancho Trabajo Rodillo': '1.860 mm',
       'Diámetro del Tambor': '1.200 mm',
-      'Espesor Cubierta Tambor': '20 mm',
-      'Capacidad de Vibración': '106 KN',
+      'Espesor Cubierta': '20 mm',
+      'Capacidad Vibración': '106 KN',
     },
     hotspots: [
-      { number: '1', position: [-0.5, -0.2, 0], title: 'Rodillo Cilíndrico', description: 'Tambor metálico de alta frecuencia de vibración.' },
-      { number: '2', position: [0.2, 0.4, 0], title: 'Cabina Operativa', description: 'Protección ROPS/FOPS para alta seguridad.' },
-      { number: '3', position: [0.6, -0.2, 0], title: 'Eje Neumático Trasero', description: 'Ruedas de tracción para suelos inestables.' }
+      { position: [-0.5, -0.2, 0], title: 'Rodillo Cilíndrico', description: 'Tambor metálico de alta frecuencia de vibración.' },
+      { position: [0.2, 0.4, 0], title: 'Cabina Operativa', description: 'Protección ROPS/FOPS para alta seguridad.' },
+      { position: [0.6, -0.2, 0], title: 'Eje Neumático Trasero', description: 'Ruedas de tracción para suelos inestables.' }
     ]
   }
 };
@@ -299,41 +297,80 @@ const MAQUINARIAS: Record<string, MaquinariaData> = {
 type MaquinariaKey = keyof typeof MAQUINARIAS;
 const MAQUINARIA_KEYS = Object.keys(MAQUINARIAS) as MaquinariaKey[];
 
-function Hotspot({ position, title, description, number = '+' }: HotspotData) {
+function Hotspot({ position, title, description }: HotspotData) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const groupRef = useRef<THREE.Group>(null!);
+
+  useFrame(({ camera }) => {
+    if (!groupRef.current) return;
+
+    const worldPos = new THREE.Vector3();
+    groupRef.current.getWorldPosition(worldPos);
+
+    const cameraToHotspot = worldPos.clone().sub(camera.position).normalize();
+    const hotspotNormal = new THREE.Vector3(...position).normalize();
+
+    const isFacingCamera = cameraToHotspot.dot(hotspotNormal) < 0;
+
+    if (isVisible !== isFacingCamera) {
+      setIsVisible(isFacingCamera);
+      if (!isFacingCamera && isOpen) {
+        setIsOpen(false);
+      }
+    }
+  });
 
   return (
-    <Html position={position} center zIndexRange={[100, 0]}>
-      <div className="hotspot-container">
-        <button
-          className="hotspot-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen((prev) => !prev);
-          }}
-          type="button"
-        >
-          {isOpen ? '✕' : number}
-        </button>
+    <group ref={groupRef} position={position}>
+      <Html
+        center
+        zIndexRange={[100, 0]}
+        style={{
+          transition: 'opacity 0.2s ease, transform 0.2s ease',
+          opacity: isVisible ? 1 : 0,
+          pointerEvents: isVisible ? 'auto' : 'none',
+          transform: isVisible ? 'scale(1)' : 'scale(0.5)',
+        }}
+      >
+        <div className="hotspot-container">
+          {/* Botón de Hotspot con punto intermitente */}
+          <button
+            className="hotspot-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen((prev) => !prev);
+            }}
+            type="button"
+            aria-label={title}
+          >
+            {isOpen ? (
+              <span style={{ color: '#000000', fontSize: '12px', fontWeight: 'bold' }}>✕</span>
+            ) : (
+              <span className="hotspot-dot" />
+            )}
+          </button>
 
-        {isOpen && (
-          <div className="hotspot-card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <strong style={{ fontSize: '15px', color: '#eab308' }}>{title}</strong>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: '16px', padding: '4px' }}
-              >
-                ✕
-              </button>
+          {/* Card de Información */}
+          {isOpen && (
+            <div className="hotspot-card" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong style={{ fontSize: '15px', color: '#eab308' }}>{title}</strong>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: '16px', padding: '4px' }}
+                >
+                  ✕
+                </button>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4' }}>
+                {description}
+              </p>
             </div>
-            <p style={{ margin: 0, fontSize: '13px', color: '#e2e8f0', lineHeight: '1.4' }}>
-              {description}
-            </p>
-          </div>
-        )}
-      </div>
-    </Html>
+          )}
+        </div>
+      </Html>
+    </group>
   );
 }
 
@@ -555,34 +592,31 @@ export default function ModelCanvas() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '24px',
-            backgroundColor: 'rgba(0,0,0,0.4)'
+            padding: '20px',
+            backgroundColor: 'rgba(0,0,0,0.45)'
           }}
         >
           <div
-            className="spec-sheet-modal"
             onClick={(e) => e.stopPropagation()}
             style={{
               pointerEvents: 'auto',
               width: '100%',
-              maxWidth: '600px',
-              maxHeight: '70vh',
-              backgroundColor: 'rgba(0, 0, 0, 0.92)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
+              maxWidth: '850px',
+              backgroundColor: 'rgba(0, 0, 0, 0.94)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               border: '1px solid #eab308',
               borderRadius: '16px',
-              padding: '28px',
+              padding: '24px 28px',
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.95)',
-              overflowY: 'auto'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', borderBottom: '1px solid #333', paddingBottom: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #333', paddingBottom: '12px' }}>
               <div>
-                <span style={{ fontSize: '12px', textTransform: 'uppercase', color: '#eab308', fontWeight: 'bold', letterSpacing: '1px' }}>Especificaciones Técnicas</span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '20px', color: '#ffffff', fontWeight: 'bold' }}>{currentData.nombre}</h2>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#eab308', fontWeight: 'bold', letterSpacing: '1px' }}>Especificaciones Técnicas</span>
+                <h2 style={{ margin: '2px 0 0 0', fontSize: '20px', color: '#ffffff', fontWeight: 'bold' }}>{currentData.nombre}</h2>
               </div>
               <button
                 onClick={() => setSpecSheetOpen(false)}
@@ -591,8 +625,8 @@ export default function ModelCanvas() {
                   border: '1px solid #eab308',
                   borderRadius: '50%',
                   color: '#eab308',
-                  width: '36px',
-                  height: '36px',
+                  width: '34px',
+                  height: '34px',
                   cursor: 'pointer',
                   fontSize: '16px',
                   fontWeight: 'bold',
@@ -606,7 +640,14 @@ export default function ModelCanvas() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* Grid dinámico de 2 columnas */}
+            <div 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', 
+                gap: '8px 20px',
+              }}
+            >
               {Object.entries(currentData.especificaciones).map(([clave, valor], idx) => (
                 <div
                   key={idx}
@@ -614,14 +655,14 @@ export default function ModelCanvas() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '10px 14px',
-                    backgroundColor: idx % 2 === 0 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    backgroundColor: idx % 4 < 2 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '6px',
                     borderLeft: '3px solid #eab308'
                   }}
                 >
-                  <span style={{ fontSize: '14px', color: '#d4d4d8', fontWeight: '500' }}>{clave}</span>
-                  <span style={{ fontSize: '14px', color: '#ffffff', fontWeight: 'bold', textAlign: 'right', marginLeft: '20px' }}>{valor}</span>
+                  <span style={{ fontSize: '12px', color: '#d4d4d8', fontWeight: '500' }}>{clave}</span>
+                  <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: 'bold', textAlign: 'right', marginLeft: '12px' }}>{valor}</span>
                 </div>
               ))}
             </div>
@@ -661,34 +702,35 @@ export default function ModelCanvas() {
 
       {/* Canvas 3D */}
       <Canvas key={selectedKey} camera={{ position: cameraPos, fov: 35 }} gl={{ alpha: true }} shadows>
-        <ambientLight intensity={0.6} />
-        <hemisphereLight args={['#ffffff', '#333333', 0.5]} />
+        <ambientLight intensity={0.5} />
+        <hemisphereLight args={['#ffffff', '#222222', 0.4]} />
 
         <directionalLight
           position={[5, 8, 5]}
-          intensity={0.9}
+          intensity={1.2}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
+          shadow-bias={-0.0001}
         />
 
-        <directionalLight position={[-5, 5, -5]} intensity={0.4} />
-        <directionalLight position={[0, -5, 5]} intensity={0.3} />
+        <directionalLight position={[-5, 5, -5]} intensity={0.3} />
+        <directionalLight position={[0, -5, 5]} intensity={0.2} />
 
-        <Suspense fallback={null}>
+        <React.Suspense fallback={null}>
           <Model data={currentData} showHotspots={!specSheetOpen} />
 
-          {/* Sombra de contacto suave fija sobre la tierra del fondo */}
           <ContactShadows
-            opacity={0.7}
-            scale={10}
-            blur={2}
-            far={1}
-            position={[0, -0.5, 0]}
+            opacity={1.8}
+            scale={12}
+            blur={1.8}
+            far={1.5}
+            resolution={1024}
+            color="#000000"
+            position={[0, -0.48, 0]}
           />
-        </Suspense>
+        </React.Suspense>
 
-        {/* Control de cámara con restricción vertical para mantener la maquinaria sobre el suelo */}
         <OrbitControls 
           makeDefault 
           target={[0, 0, 0]}
